@@ -34,12 +34,16 @@ class ThanhNT_GUI(tk.Tk):
 
     def load_yolo(self):
         # Load Yolo
-        self.net = cv2.dnn.readNet("weights/yolov3-tiny.weights", "cfg/yolov3-tiny.cfg")
+        self.net = cv2.dnn.readNet("weights/yolov3_training_1000.weights", "cfg/yolov3_testing.cfg")
         self.classes = []
-        with open("coco.names", "r") as f:
+        with open("classes.names", "r") as f:
             self.classes = [line.strip() for line in f.readlines()]
         self.layer_names = self.net.getLayerNames()
+
+        # ?
         self.output_layers = [self.layer_names[i - 1] for i in self.net.getUnconnectedOutLayers()]
+
+        # Random bounding color for number of classes
         self.colors = np.random.uniform(0, 255, size=(len(self.classes), 3))
 
     def detect_objects(self, src):
@@ -49,6 +53,7 @@ class ThanhNT_GUI(tk.Tk):
         
         # Detecting objects
         blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
+        # blob = cv2.dnn.blobFromImage(frame, 0.00392, (320, 320), (0, 0, 0), True, crop=False)
 
         self.net.setInput(blob)
         outs = self.net.forward(self.output_layers)
@@ -119,7 +124,7 @@ class ThanhNT_GUI(tk.Tk):
         
         self.photoImage = self.createPhotoImage(dst_frame)
         self.frame_label.config(image = self.photoImage)
-        self.after(ms = 1000, func = self.update_frame)
+        self.after(ms = 42, func = self.update_frame)
 
     
 
@@ -127,10 +132,9 @@ class ThanhNT_GUI(tk.Tk):
 def ThanhNT_main():
     """
     ThanhNT: load video and detect realtime
-    """
-
-    
-
+    """    
+  
+    """ 
     # define our new video
     video_filename = 'elderly.mp4'
 
@@ -145,6 +149,7 @@ def ThanhNT_main():
             break
 
     print(f'Number of frame: {len(frames)}')
+    """
 
     app = ThanhNT_GUI(frames = None)
     app.mainloop()
