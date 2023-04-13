@@ -34,7 +34,7 @@ class ThanhNT_GUI(tk.Tk):
 
     def load_yolo(self):
         # Load Yolo
-        self.net = cv2.dnn.readNet("weights/yolov3_training_1000.weights", "cfg/yolov3_testing.cfg")
+        self.net = cv2.dnn.readNet("weights/yolov3_training_final.weights", "cfg/yolov3_testing.cfg")
         self.classes = []
         with open("classes.names", "r") as f:
             self.classes = [line.strip() for line in f.readlines()]
@@ -134,7 +134,7 @@ def ThanhNT_main():
     ThanhNT: load video and detect realtime
     """    
   
-    """ 
+    
     # define our new video
     video_filename = 'elderly.mp4'
 
@@ -149,9 +149,9 @@ def ThanhNT_main():
             break
 
     print(f'Number of frame: {len(frames)}')
-    """
+    
 
-    app = ThanhNT_GUI(frames = None)
+    app = ThanhNT_GUI(frames = frames)
     app.mainloop()
     
 
