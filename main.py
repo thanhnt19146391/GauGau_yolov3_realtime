@@ -2,11 +2,13 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
+import torch
 
 class ThanhNT_GUI(tk.Tk):
     def __init__(self, frames = None, *arg, **kwargs):
         """ Backend """
-        self.load_yolo()
+        # self.load_yolov3()
+        self.load_yolov5()
 
         self.frames = frames
 
@@ -23,8 +25,6 @@ class ThanhNT_GUI(tk.Tk):
         # Configure window size as maximum
         self.state('zoomed')
 
-        
-
         self.frame_label = tk.Label(
             master = self
         )
@@ -32,72 +32,36 @@ class ThanhNT_GUI(tk.Tk):
 
         self.update_frame()
 
-    def load_yolo(self):
-        # Load Yolo
-        self.net = cv2.dnn.readNet("weights/yolov3_training_final.weights", "cfg/yolov3_testing.cfg")
-        self.classes = []
-        with open("classes.names", "r") as f:
-            self.classes = [line.strip() for line in f.readlines()]
-        self.layer_names = self.net.getLayerNames()
+    def load_yolov5(self):
+        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5n', force_reload=True)  # yolov5n - yolov5x6 or custom
 
-        # ?
-        self.output_layers = [self.layer_names[i - 1] for i in self.net.getUnconnectedOutLayers()]
-
-        # Random bounding color for number of classes
-        self.colors = np.random.uniform(0, 255, size=(len(self.classes), 3))
-
-    def detect_objects(self, src):
+    def detect_objects_yolov5(self, src):
         frame = src.copy()
 
-        height, width, channels = frame.shape
-        
-        # Detecting objects
-        blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
-        # blob = cv2.dnn.blobFromImage(frame, 0.00392, (320, 320), (0, 0, 0), True, crop=False)
+        results = self.model(frame)  # inference
+        results.print()  # or .show(), .save(), .crop(), .pandas(), etc.
+        df = results.pandas().xyxy[0]
+        print(df)
+        print('-------------------------------------------')
 
-        self.net.setInput(blob)
-        outs = self.net.forward(self.output_layers)
-
-         # Showing informations on the screen
-        class_ids = []
-        confidences = []
-        boxes = []
-        for out in outs:
-            for detection in out:
-                scores = detection[5:]
-                class_id = np.argmax(scores)
-                confidence = scores[class_id]
-                if confidence > 0.2:
-                    # Object detected
-                    center_x = int(detection[0] * width)
-                    center_y = int(detection[1] * height)
-                    w = int(detection[3] * width)
-                    h = int(detection[3] * height)
-
-                    # Rectangle coordinates
-                    x = int(center_x - w / 1.8)
-                    y = int(center_y - h / 1.8)
-
-                    boxes.append([x, y, w, h])
-                    confidences.append(float(confidence))
-                    class_ids.append(class_id)
-
-        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.4, 0.3)
-        for i in range(len(boxes)):
-            if i in indexes:
-                x, y, w, h = boxes[i]
-                label = str(self.classes[class_ids[i]])
-                confidence = confidences[i]
-                color = self.colors[class_ids[i]]
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 255), 2)
-                cv2.putText(
+        for i in range(df.shape[0]):
+            xmin, ymin, xmax, ymax, confidence, num_class, name = df.iloc[i]
+            cv2.rectangle(
+                img = frame, 
+                pt1 = (round(xmin), round(ymin)),
+                pt2 = (round(xmax), round(ymax)),
+                color = (255, 255, 255),
+                thickness = 2
+            )
+            cv2.putText(
                     img = frame, 
-                    text = label + " " + str(round(confidence, 2)), 
-                    org = (x, y + 30), 
+                    text = f'{name} ({round(confidence * 100)}%)', 
+                    org = (round(xmin) + 5, round(ymin) + 25), 
                     fontFace = cv2.FONT_HERSHEY_PLAIN, 
-                    fontScale = 2, 
+                    fontScale = 2,
                     color = (255, 255, 255), 
                     thickness = 2)
+
         return frame
 
     def createPhotoImage(self, mat):
@@ -119,7 +83,8 @@ class ThanhNT_GUI(tk.Tk):
             # self.frame_index = (self.frame_index + 1) % 10
             print(f'Frame {self.frame_index}')
             frame = self.frames[self.frame_index]
-        dst_frame = self.detect_objects(src = frame)
+
+        dst_frame = self.detect_objects_yolov5(src = frame)
         # dst_frame = frame
         
         self.photoImage = self.createPhotoImage(dst_frame)
@@ -151,12 +116,11 @@ def ThanhNT_main():
     print(f'Number of frame: {len(frames)}')
     
 
-    app = ThanhNT_GUI(frames = frames)
+    app = ThanhNT_GUI(frames = None)
     app.mainloop()
     
 
     
-
 if __name__ == '__main__':
     ThanhNT_main()
    
